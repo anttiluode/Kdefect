@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this code, cite this repository and the underlying physics papers listed in README.md."
+title: "Kdefect: Birth versus survival in noncanonical U(1) defects"
+type: software
+authors:
+  - family-names: Luode
+    given-names: Antti
+version: 0.1.0
+date-released: 2026-09-04
+license: MIT
+repository-code: "https://github.com/anttiluode/Kdefect"

@@ -1,0 +1,53 @@
+{
+  "gate": "GATE_0_ACTION_AUDIT",
+  "classification": "ACTION_DERIVED_ARMS_AND_STIFFNESS_BOUNDARIES_VERIFIED",
+  "passed": true,
+  "seed": 1729,
+  "parameters": {
+    "epsilon": 0.31,
+    "kappa": 4.0,
+    "quartic": 1.0,
+    "regulator": 0.03,
+    "dx": 0.8
+  },
+  "finite_difference_step": 1e-06,
+  "descent_step": 1e-05,
+  "arms": {
+    "canonical": {
+      "finite_difference_directional_derivative": 2.061362741390127,
+      "force_directional_derivative": 2.0613627413979256,
+      "relative_error": 3.783250011052518e-12,
+      "energy_before": 3.6917964497886167,
+      "energy_after_one_gradient_step": 3.6915542746924594,
+      "energy_drop": 0.00024217509615720445,
+      "passed": true
+    },
+    "log": {
+      "finite_difference_directional_derivative": 1.2694865643148034,
+      "force_directional_derivative": 1.2694865641700763,
+      "relative_error": 1.1400445128461551e-10,
+      "energy_before": 3.308306074751444,
+      "energy_after_one_gradient_step": 3.3081329799199732,
+      "energy_drop": 0.0001730948314708769,
+      "passed": true
+    },
+    "sqrt": {
+      "finite_difference_directional_derivative": 1.6334138319695768,
+      "force_directional_derivative": 1.6334138318675446,
+      "relative_error": 6.246559108372446e-11,
+      "energy_before": 3.492360032880103,
+      "energy_after_one_gradient_step": 3.492156308989044,
+      "energy_drop": 0.00020372389105904887,
+      "passed": true
+    }
+  },
+  "ellipticity": {
+    "predicted_log_crossing_Y": 0.25,
+    "log_below_threshold_positive": true,
+    "log_at_threshold_zero": true,
+    "log_above_threshold_negative": true,
+    "sqrt_positive_on_scan": true,
+    "canonical_positive_on_scan": true
+  },
+  "claim_boundary": "This gate validates the discretized variational force and analytic principal stiffness. It is not evidence for a new universality class."
+}
