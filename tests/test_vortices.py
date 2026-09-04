@@ -57,3 +57,18 @@ def test_worldline_assignment_respects_charge_and_periodic_boundary() -> None:
     assert len(positive) == 1 and positive[0].end_frame == 2
     assert len(negative) == 1 and negative[0].end_frame == 1
     assert initial_survival_fraction(tracks, 2) == pytest.approx(0.5)
+
+
+def test_optional_gap_allowance_reconnects_one_missing_frame() -> None:
+    frames = [[make_vortex(2.0, 3.0, 1)], [], [make_vortex(2.4, 3.0, 1)]]
+    strict = track_vortices(frames, [0.0, 1.0, 2.0], box_size=10.0, max_speed=1.0)
+    tolerant = track_vortices(
+        frames,
+        [0.0, 1.0, 2.0],
+        box_size=10.0,
+        max_speed=1.0,
+        max_gap_frames=1,
+    )
+    assert len(strict) == 2
+    assert len(tolerant) == 1
+    assert tolerant[0].end_frame == 2

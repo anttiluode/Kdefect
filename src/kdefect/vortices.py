@@ -240,18 +240,22 @@ def track_vortices(
     *,
     box_size: float,
     max_speed: float,
+    max_gap_frames: int = 0,
 ) -> list[VortexTrack]:
     """Link detections with a minimum-cost assignment at each frame.
 
-    Tracks terminate after one missed frame.  This conservative rule avoids
-    inventing survival across an unresolved annihilation or pair-creation
-    event; callers should report detector cadence and speed cutoff.
+    With ``max_gap_frames=0`` a track terminates after one missed frame. A
+    small positive gap allowance distinguishes detector flicker from motion,
+    but can also reconnect unrelated cores; callers must report both the
+    cadence and this allowance.
     """
 
     if len(frames) != len(times):
         raise ValueError("frames and times must have equal length")
     if not frames:
         return []
+    if max_gap_frames < 0:
+        raise ValueError("max_gap_frames must be nonnegative")
     try:
         from scipy.optimize import linear_sum_assignment
     except ImportError as exc:  # pragma: no cover - dependency declared by package
@@ -278,23 +282,33 @@ def track_vortices(
         dt = float(times[frame_index] - times[frame_index - 1])
         if dt <= 0.0:
             raise ValueError("times must be strictly increasing")
+        eligible_active = {
+            identifier: vortex
+            for identifier, vortex in active.items()
+            if frame_index - tracks[identifier].end_frame <= max_gap_frames + 1
+        }
         new_active: dict[int, Vortex] = {}
         assigned_new: set[int] = set()
         current = list(frames[frame_index])
         for charge in (-1, 1):
-            old_ids = [identifier for identifier, v in active.items() if v.charge == charge]
+            old_ids = [
+                identifier for identifier, v in eligible_active.items() if v.charge == charge
+            ]
             new_ids = [index for index, v in enumerate(current) if v.charge == charge]
             if not old_ids or not new_ids:
                 continue
-            old_positions = np.array([[active[k].x, active[k].y] for k in old_ids])
+            old_positions = np.array(
+                [[eligible_active[k].x, eligible_active[k].y] for k in old_ids]
+            )
             new_positions = np.array([[current[k].x, current[k].y] for k in new_ids])
             costs = periodic_distance_matrix(old_positions, new_positions, box_size)
             rows, columns = linear_sum_assignment(costs)
             for row, column in zip(rows, columns, strict=True):
-                distance = float(costs[row, column])
-                if distance > max_speed * dt:
-                    continue
                 identifier = old_ids[int(row)]
+                elapsed = float(times[frame_index] - tracks[identifier].points[-1].time)
+                distance = float(costs[row, column])
+                if distance > max_speed * elapsed:
+                    continue
                 detection_index = new_ids[int(column)]
                 vortex = current[detection_index]
                 tracks[identifier].points.append(
@@ -302,6 +316,12 @@ def track_vortices(
                 )
                 new_active[identifier] = vortex
                 assigned_new.add(detection_index)
+        for identifier, vortex in eligible_active.items():
+            if identifier in new_active:
+                continue
+            missed = frame_index - tracks[identifier].end_frame
+            if missed <= max_gap_frames:
+                new_active[identifier] = vortex
         active = new_active
         for detection_index, vortex in enumerate(current):
             if detection_index not in assigned_new:

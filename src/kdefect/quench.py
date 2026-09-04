@@ -73,10 +73,14 @@ class QuenchResult:
     mean_power: RealArray
     free_energy: RealArray
     raw_defects: NDArray[np.int64]
+    raw_charge: NDArray[np.int64]
     resolved_defects: NDArray[np.int64]
     negative_stiffness_fraction: RealArray
+    kappa_gradient_p95: RealArray
+    kappa_gradient_max: RealArray
     detections: list[list[Vortex]]
     final_field: ComplexArray
+    sampled_fields: list[ComplexArray] | None
 
 
 @dataclass(frozen=True)
@@ -91,6 +95,9 @@ class BirthSurvival:
     later_count: int
     count_ratio: float
     tracked_survival: float
+    gap_tolerant_survival: float
+    final_reacquired_or_new_fraction: float
+    post_birth_track_starts: int
 
 
 def quench_epsilon(time: float, tau_q: float, epsilon0: float) -> float:
@@ -104,6 +111,7 @@ def simulate_quench(
     config: QuenchConfig,
     *,
     seed: int,
+    store_fields: bool = False,
 ) -> QuenchResult:
     """Run one stochastic quench and sample topology plus thermodynamics."""
 
@@ -125,9 +133,13 @@ def simulate_quench(
     powers: list[float] = []
     energies: list[float] = []
     raw_counts: list[int] = []
+    raw_charges: list[int] = []
     resolved_counts: list[int] = []
     negative_fractions: list[float] = []
+    gradient_p95: list[float] = []
+    gradient_max: list[float] = []
     detections: list[list[Vortex]] = []
+    sampled_fields: list[ComplexArray] | None = [] if store_fields else None
 
     for step in range(number_of_steps + 1):
         time = start + step * config.dt
@@ -141,9 +153,8 @@ def simulate_quench(
                 require_resolved=True,
                 max_core_ratio=config.max_core_ratio,
             )
-            stiffness = law.longitudinal_stiffness(
-                gradient_invariant(field, config.dx), config.kappa
-            )
+            y = gradient_invariant(field, config.dx)
+            stiffness = law.longitudinal_stiffness(y, config.kappa)
             times.append(time)
             epsilons.append(epsilon)
             powers.append(float(np.mean(np.abs(field) ** 2)))
@@ -161,9 +172,14 @@ def simulate_quench(
                 )
             )
             raw_counts.append(int(np.sum(np.abs(winding))))
+            raw_charges.append(int(np.sum(winding)))
             resolved_counts.append(len(resolved))
             negative_fractions.append(float(np.mean(stiffness < 0.0)))
+            gradient_p95.append(float(np.quantile(config.kappa * y, 0.95)))
+            gradient_max.append(float(np.max(config.kappa * y)))
             detections.append(resolved)
+            if sampled_fields is not None:
+                sampled_fields.append(field.copy())
         if step == number_of_steps:
             break
         field = euler_maruyama_step(
@@ -193,10 +209,14 @@ def simulate_quench(
         mean_power=np.asarray(powers),
         free_energy=np.asarray(energies),
         raw_defects=np.asarray(raw_counts, dtype=np.int64),
+        raw_charge=np.asarray(raw_charges, dtype=np.int64),
         resolved_defects=np.asarray(resolved_counts, dtype=np.int64),
         negative_stiffness_fraction=np.asarray(negative_fractions),
+        kappa_gradient_p95=np.asarray(gradient_p95),
+        kappa_gradient_max=np.asarray(gradient_max),
         detections=detections,
         final_field=field,
+        sampled_fields=sampled_fields,
     )
 
 
@@ -253,6 +273,21 @@ def measure_birth_survival(
         max_speed=max_speed,
     )
     tracked = initial_survival_fraction(tracks, survival_frame - birth_frame)
+    tolerant_tracks = track_vortices(
+        window_frames,
+        window_times,
+        box_size=result.config.size * result.config.dx,
+        max_speed=max_speed,
+        max_gap_frames=2,
+    )
+    final_frame = survival_frame - birth_frame
+    tolerant = initial_survival_fraction(tolerant_tracks, final_frame)
+    final_tracks = [track for track in tolerant_tracks if track.end_frame == final_frame]
+    initial_at_final = sum(track.start_frame == 0 for track in final_tracks)
+    reacquired_fraction = (
+        float(1.0 - initial_at_final / len(final_tracks)) if final_tracks else float("nan")
+    )
+    later_starts = sum(track.start_frame > 0 for track in tolerant_tracks)
     return BirthSurvival(
         birth_frame=birth_frame,
         survival_frame=survival_frame,
@@ -262,4 +297,7 @@ def measure_birth_survival(
         later_count=later_count,
         count_ratio=float(later_count / birth_count),
         tracked_survival=tracked,
+        gap_tolerant_survival=tolerant,
+        final_reacquired_or_new_fraction=reacquired_fraction,
+        post_birth_track_starts=later_starts,
     )

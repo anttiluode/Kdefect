@@ -13,6 +13,14 @@ overdamped stochastic Model-A theory—a dissipative Euclidean cousin of relativ
 `k`-defect models, not a theory of gravity and not yet evidence for a new universality
 class.
 
+There is also a deliberate two-dimensional caveat: at nonzero temperature a strict
+equilibrium U(1) model has Berezinskii–Kosterlitz–Thouless rather than ordinary
+mean-field criticality. Here `epsilon=0` is the *bare Landau instability*, not a
+numerically calibrated BKT point. The familiar `-1/2` density exponent is therefore a
+reference hypothesis; Gate 3 must calibrate the finite-size transition/crossover or
+separately use a noise-seeded zero-temperature protocol before calling it a universal
+Kibble–Zurek exponent.
+
 ## The seam
 
 Noncanonical kinetic terms are known to alter the size and energy of topological
@@ -85,6 +93,31 @@ The small default pilot is an instrument check. The preregistered 100–400-real
 campaign, convergence requirements, and kill conditions are in
 [PREREGISTRATION.md](PREREGISTRATION.md).
 
+## First receipts
+
+Gate 0 passed: the worst numerical action/force mismatch is `1.14e-10`, and all three
+gradient flows lower their declared lattice energy.
+
+The paired `48^2`, four-seed pilot then produced the useful split the project was built
+to detect:
+
+- at `kappa=4`, the log arm never reaches negative stiffness (`max kappa*Y=0.586`), so
+  that run is a pipeline baseline, not a test of the proposed mechanism;
+- at exploratory `kappa=32`, log-arm resolved birth counts are about `1.97–2.03x`
+  canonical, while the tiny-sample slope contrast is `0.002 [-0.194, 0.212]`;
+- the larger late log population is **not** equivalent to survival of the birth cohort:
+  `39–62%` of final cores are newly linked or reacquired even with a two-frame gap
+  allowance;
+- a one-grid regulator scout changes absolute birth counts in every arm. The
+  log/canonical birth ratio spans about `14%` over `g=0.015–0.12`, so regulator
+  independence is not established.
+
+Those are leads and failure diagnostics, not discovery claims. Exact tables,
+bootstrap intervals, and the next decision are in [RESULTS.md](RESULTS.md); complete
+machine-readable records are under [`results/`](results/).
+
+![Strong-core exploratory scout](figures/gate1b_strong_core_scout.png)
+
 ## Run it
 
 Python 3.11 or newer is required.
@@ -96,6 +129,7 @@ python -m pip install -e '.[dev]'
 pytest
 python experiments/gate0_action_audit.py
 python experiments/gate1_birth_survival.py
+python experiments/gate2_regulator_scout.py
 ```
 
 For a first statistically useful campaign (still below the final target):

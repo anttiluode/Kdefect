@@ -70,6 +70,47 @@ def poisson_nn_ks(spacings: ArrayLike) -> float:
     return float(max(np.max(np.abs(upper - cdf)), np.max(np.abs(cdf - lower))))
 
 
+def density_spectrum_diagnostics(field: NDArray[np.complexfloating], dx: float) -> dict[str, float]:
+    """Radially averaged spectrum of density fluctuations on a square grid."""
+
+    if field.ndim != 2 or field.shape[0] != field.shape[1]:
+        raise ValueError("density spectrum expects one square two-dimensional field")
+    size = field.shape[0]
+    density = np.abs(field) ** 2
+    density = density - np.mean(density)
+    power = np.abs(np.fft.fft2(density)) ** 2
+    wave = 2.0 * np.pi * np.fft.fftfreq(size, d=dx)
+    kx, ky = np.meshgrid(wave, wave, indexing="ij")
+    magnitude = np.sqrt(kx**2 + ky**2)
+    fundamental = 2.0 * np.pi / (size * dx)
+    shell = np.rint(magnitude / fundamental).astype(int)
+    shell_power = np.bincount(shell.ravel(), weights=power.ravel())
+    shell_count = np.bincount(shell.ravel())
+    radial = np.divide(
+        shell_power,
+        shell_count,
+        out=np.zeros_like(shell_power, dtype=float),
+        where=shell_count > 0,
+    )
+    radial[0] = 0.0
+    peak_shell = int(np.argmax(radial))
+    nonzero_power = power[magnitude > 0.0]
+    nonzero_k = magnitude[magnitude > 0.0]
+    total = float(np.sum(nonzero_power))
+    centroid = float(np.sum(nonzero_k * nonzero_power) / total) if total > 0.0 else float("nan")
+    nyquist = np.pi / dx
+    high_fraction = (
+        float(np.sum(power[magnitude >= 0.5 * nyquist]) / total)
+        if total > 0.0
+        else float("nan")
+    )
+    return {
+        "radial_peak_k": float(peak_shell * fundamental),
+        "spectral_centroid_k": centroid,
+        "high_k_power_fraction": high_fraction,
+    }
+
+
 def loglog_slope(x: ArrayLike, y: ArrayLike) -> float:
     """Ordinary least-squares slope in log-log coordinates."""
 
@@ -87,7 +128,7 @@ def bootstrap_loglog_slope(
     *,
     draws: int = 2000,
     seed: int = 0,
-) -> dict[str, float]:
+) -> dict[str, float | int]:
     """Bootstrap whole realizations within each quench-time group."""
 
     x_array = np.asarray(x, dtype=float)
@@ -107,6 +148,96 @@ def bootstrap_loglog_slope(
         return {"median": float("nan"), "low_95": float("nan"), "high_95": float("nan")}
     low, median, high = np.quantile(finite, [0.025, 0.5, 0.975])
     return {"median": float(median), "low_95": float(low), "high_95": float(high)}
+
+
+def paired_bootstrap_mean_difference(
+    reference: ArrayLike,
+    treatment: ArrayLike,
+    *,
+    draws: int = 5000,
+    seed: int = 0,
+) -> dict[str, float]:
+    """Bootstrap the paired mean difference ``treatment-reference``."""
+
+    left = np.asarray(reference, dtype=float)
+    right = np.asarray(treatment, dtype=float)
+    if left.shape != right.shape or left.ndim != 1 or len(left) == 0:
+        raise ValueError("reference and treatment must be equal nonempty vectors")
+    valid = np.isfinite(left) & np.isfinite(right)
+    left = left[valid]
+    right = right[valid]
+    if len(left) == 0:
+        return {
+            "finite_pairs": 0,
+            "observed": float("nan"),
+            "median": float("nan"),
+            "low_95": float("nan"),
+            "high_95": float("nan"),
+        }
+    differences = right - left
+    rng = np.random.default_rng(seed)
+    indices = rng.integers(0, len(differences), size=(draws, len(differences)))
+    bootstrapped = np.mean(differences[indices], axis=1)
+    low, median, high = np.quantile(bootstrapped, [0.025, 0.5, 0.975])
+    return {
+        "finite_pairs": len(differences),
+        "observed": float(np.mean(differences)),
+        "median": float(median),
+        "low_95": float(low),
+        "high_95": float(high),
+    }
+
+
+def bootstrap_loglog_slope_difference(
+    x: ArrayLike,
+    reference_by_x: Sequence[ArrayLike],
+    treatment_by_x: Sequence[ArrayLike],
+    *,
+    draws: int = 5000,
+    seed: int = 0,
+) -> dict[str, float]:
+    """Paired bootstrap of treatment minus reference log-log slopes."""
+
+    x_array = np.asarray(x, dtype=float)
+    left = [np.asarray(group, dtype=float) for group in reference_by_x]
+    right = [np.asarray(group, dtype=float) for group in treatment_by_x]
+    if len(left) != len(x_array) or len(right) != len(x_array):
+        raise ValueError("one pair of groups is required for every x")
+    if any(
+        a.shape != b.shape or a.ndim != 1 or len(a) == 0
+        for a, b in zip(left, right, strict=True)
+    ):
+        raise ValueError("paired groups must be equal nonempty vectors")
+    rng = np.random.default_rng(seed)
+    differences = np.empty(draws, dtype=float)
+    for draw in range(draws):
+        reference_means: list[float] = []
+        treatment_means: list[float] = []
+        for reference_group, treatment_group in zip(left, right, strict=True):
+            indices = rng.integers(0, len(reference_group), size=len(reference_group))
+            reference_means.append(float(np.mean(reference_group[indices])))
+            treatment_means.append(float(np.mean(treatment_group[indices])))
+        differences[draw] = loglog_slope(x_array, treatment_means) - loglog_slope(
+            x_array, reference_means
+        )
+    finite = differences[np.isfinite(differences)]
+    if len(finite) == 0:
+        return {
+            "observed": float("nan"),
+            "median": float("nan"),
+            "low_95": float("nan"),
+            "high_95": float("nan"),
+        }
+    observed = loglog_slope(x_array, [np.mean(group) for group in right]) - loglog_slope(
+        x_array, [np.mean(group) for group in left]
+    )
+    low, median, high = np.quantile(finite, [0.025, 0.5, 0.975])
+    return {
+        "observed": float(observed),
+        "median": float(median),
+        "low_95": float(low),
+        "high_95": float(high),
+    }
 
 
 def charge_form_factor(

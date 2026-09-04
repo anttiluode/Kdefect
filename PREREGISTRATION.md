@@ -22,6 +22,13 @@ The free energy and dynamics are those printed in the README and implemented in
 \rho_{\rm birth}\propto \tau_Q^{-D\nu/(1+z\nu)}=\tau_Q^{-1/2}.
 ```
 
+This is a bare mean-field reference, not an assumption smuggled into the fit. At finite
+temperature a strictly two-dimensional U(1) equilibrium system has BKT criticality and
+no conventional long-range order in the thermodynamic limit. Before confirmatory use,
+Gate 3 must either calibrate the finite-size transition and its effective critical
+dynamics or analyze a separate zero-temperature, noise-seeded Landau-instability
+protocol. Results from those protocols may not be pooled.
+
 The hypotheses are:
 
 - **H1 — shared birth law:** after finite-size, time-step, detector, and core-size
@@ -77,7 +84,9 @@ physical box size and dimensionless physical parameters fixed. Required plateaus
   (`max_core_ratio = 0.75, 0.85, 0.95`);
 - survival estimates are stable under halving sample cadence and varying the speed
   cutoff by `±25%`;
-- total topological charge is zero to lattice precision in every periodic frame.
+- raw plaquette topological charge is zero to lattice precision in every periodic frame;
+  the resolved subset may be temporarily imbalanced when one core of a pair fails the
+  amplitude-resolution gate, and that imbalance is reported.
 
 For the logarithmic arm, scan at least five `g` values and resolve the predicted
 finite-wavelength peak by at least eight sites. No `g -> 0` limit is presumed to exist.
@@ -117,8 +126,8 @@ field are spatially correlated and are never treated as independent samples.
 
 - numerical blow-up or non-finite energy;
 - a failed Gate 1 core validation;
-- a run whose periodic net charge is nonzero after resolved detection is retained but
-  flagged; it is not silently deleted;
+- a run whose raw periodic net charge is nonzero is retained but flagged; resolved-core
+  imbalance is always reported because the amplitude gate may hide one partner;
 - points outside the predeclared scaling window remain plotted and are marked excluded;
 - no seed is dropped because its count looks anomalous.
 
@@ -139,6 +148,9 @@ The core hypothesis is rejected or sharply downgraded if any of the following oc
    Conclusion: H1 is untestable with this model/parameter range.
 5. H2's paired effect is below `10%` with intervals narrow enough to exclude that
    threshold. Conclusion: no practically meaningful survival separation.
+6. A late count enhancement is accompanied by broken birth-frame lineages and is not
+   stable to gap/cadence tests. Conclusion: ongoing turnover or detector reacquisition,
+   not enhanced survival, until independently resolved.
 
 ## Claim discipline
 
