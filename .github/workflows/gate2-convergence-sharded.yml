@@ -50,7 +50,7 @@ jobs:
           python experiments/gate2_convergence_shard.py --panel core --size "$N" --dt "$DT" --tau "$TAU" --seeds 8 --output "campaign/core_${TAG}.json"
       - uses: actions/upload-artifact@v4
         with:
-          name: gate2-shard-core-${{ strategy.job-index }}
+          name: gate2-shard-core-${{ matrix.cell }}
           path: campaign/*.json
           retention-days: 90
 
@@ -92,7 +92,7 @@ jobs:
           python experiments/gate2_convergence_shard.py --panel log --size "$N" --dt 0.01 --regulator "$G" --seeds 6 --output "campaign/log_${TAG}.json"
       - uses: actions/upload-artifact@v4
         with:
-          name: gate2-shard-log-${{ strategy.job-index }}
+          name: gate2-shard-log-${{ matrix.cell }}
           path: campaign/*.json
           retention-days: 90
 
