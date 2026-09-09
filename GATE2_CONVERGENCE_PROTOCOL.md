@@ -141,7 +141,8 @@ The logarithmic arm is **not allowed forward** merely because it has more defect
 - for each `g`, the paired log/canonical birth-count ratio must change by `<10%`;
 - the log-minus-canonical gap-tolerant survival difference must change by `<0.05` absolute;
 - the log-minus-canonical nearest-neighbor Poisson-KS difference must change by `<0.05` absolute;
-- at least three resolved `g` points on the finest grid must have a core-spectrum peak; across those points, Spearman rank correlation between measured peak and local `k_star` must be positive and at least `0.6`.
+- at least three resolved `g` points on the finest grid must have a core-spectrum peak; across those points, Spearman rank correlation between measured peak and local `k_star` must be positive and at least `0.6`;
+- to reject a grid/Nyquist-locked spectral artifact, the median relative change in the **physical** core-spectrum peak between `N=96` and `N=128` must be `<15%` across at least three finite `g` comparisons.
 
 If the long-distance contrasts fail the grid plateau, or the spectral peak remains tied to grid/Nyquist resolution rather than moving with the local prediction, the classification is
 
