@@ -19,14 +19,54 @@ def rel_change(a: float, b: float) -> float:
     return float(abs(a-b)/scale)
 
 
+def finite_float(value: Any) -> float:
+    """Convert JSON numeric/null to a finite float or NaN."""
+    if value is None:
+        return float("nan")
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return float("nan")
+    return out if np.isfinite(out) else float("nan")
+
+
+def average_ranks(values: list[float]) -> np.ndarray:
+    """Return 0-based average ranks, including exact ties.
+
+    The previous double-argsort shortcut assigned arbitrary different ranks to
+    tied FFT-shell peaks. Gate 2 compares discretized spectral peaks, so tie
+    handling must be explicit before any result is inspected.
+    """
+    x = np.asarray(values, dtype=float)
+    if x.ndim != 1:
+        raise ValueError("rank input must be one-dimensional")
+    order = np.argsort(x, kind="mergesort")
+    ranks = np.empty(len(x), dtype=float)
+    start = 0
+    while start < len(order):
+        end = start + 1
+        while end < len(order) and x[order[end]] == x[order[start]]:
+            end += 1
+        average = 0.5 * (start + end - 1)
+        ranks[order[start:end]] = average
+        start = end
+    return ranks
+
+
 def rank_corr(x: list[float], y: list[float]) -> float:
+    """Tie-aware Spearman rank correlation without pooled-vortex inference."""
     if len(x) < 3 or len(x) != len(y):
         return float("nan")
-    rx=np.argsort(np.argsort(np.asarray(x,float))).astype(float)
-    ry=np.argsort(np.argsort(np.asarray(y,float))).astype(float)
-    if np.std(rx)==0 or np.std(ry)==0:
+    xa = np.asarray(x, dtype=float)
+    ya = np.asarray(y, dtype=float)
+    valid = np.isfinite(xa) & np.isfinite(ya)
+    if np.count_nonzero(valid) < 3:
         return float("nan")
-    return float(np.corrcoef(rx,ry)[0,1])
+    rx = average_ranks(xa[valid].tolist())
+    ry = average_ranks(ya[valid].tolist())
+    if np.std(rx) == 0 or np.std(ry) == 0:
+        return float("nan")
+    return float(np.corrcoef(rx, ry)[0, 1])
 
 
 def load(root: Path) -> tuple[list[dict[str,Any]], list[dict[str,Any]]]:
@@ -49,7 +89,6 @@ def log_shard(log,size,g):
     m=[d for d in log if int(d["size"])==size and abs(float(d["shard"]["regulator"])-g)<1e-12]
     if len(m)!=1: raise RuntimeError(f"need one log shard N={size} g={g}; got {len(m)}")
     return m[0]
-
 def core_row(d,arm):
     m=[r for r in d["summaries"] if r["arm"]==arm]
     if len(m)!=1: raise RuntimeError("core summary arm missing")
@@ -119,15 +158,15 @@ def collect(root: Path) -> dict[str,Any]:
         surv96=float(a["paired"]["log_minus_canonical_survival_mean"]); surv128=float(b["paired"]["log_minus_canonical_survival_mean"])
         nn96=float(a["paired"]["log_minus_canonical_nn_ks_mean"]); nn128=float(b["paired"]["log_minus_canonical_nn_ks_mean"])
         rc=rel_change(ratio96,ratio128); sc=abs(surv128-surv96); nc=abs(nn128-nn96)
-        p96=float(a["log"]["core_spectrum_peak_k_mean"]); p128=float(b["log"]["core_spectrum_peak_k_mean"])
+        p96=finite_float(a["log"].get("core_spectrum_peak_k_mean")); p128=finite_float(b["log"].get("core_spectrum_peak_k_mean"))
         pc=rel_change(p96,p128) if np.isfinite(p96) and np.isfinite(p128) else float("nan")
         if np.isfinite(pc): grid_peak_changes.append(pc)
-        plateau.append({"regulator":g,"birth_ratio_N96":ratio96,"birth_ratio_N128":ratio128,"birth_ratio_relative_grid_change":rc,"birth_ratio_pass":rc<.10,"survival_contrast_N96":surv96,"survival_contrast_N128":surv128,"survival_contrast_absolute_grid_change":sc,"survival_pass":sc<.05,"nn_contrast_N96":nn96,"nn_contrast_N128":nn128,"nn_contrast_absolute_grid_change":nc,"nn_pass":nc<.05,"core_peak_N96":p96,"core_peak_N128":p128,"core_peak_relative_grid_change":pc,"core_peak_grid_pass":bool(np.isfinite(pc) and pc<.15)})
+        plateau.append({"regulator":g,"birth_ratio_N96":ratio96,"birth_ratio_N128":ratio128,"birth_ratio_relative_grid_change":rc,"birth_ratio_pass":rc<.10,"survival_contrast_N96":surv96,"survival_contrast_N128":surv128,"survival_contrast_absolute_grid_change":sc,"survival_pass":sc<.05,"nn_contrast_N96":nn96,"nn_contrast_N128":nn128,"nn_contrast_absolute_grid_change":nc,"nn_pass":nc<.05,"core_peak_N96":p96 if np.isfinite(p96) else None,"core_peak_N128":p128 if np.isfinite(p128) else None,"core_peak_relative_grid_change":pc if np.isfinite(pc) else None,"core_peak_grid_pass":bool(np.isfinite(pc) and pc<.15)})
 
     predicted=[]; measured=[]; resolved=[]
     for g in GS:
         row=log_row(log_shard(log,128,g))["log"]
-        sites=float(row["predicted_wavelength_sites_mean"]); pk=float(row["predicted_k_star_mean"]); mk=float(row["core_spectrum_peak_k_mean"])
+        sites=finite_float(row.get("predicted_wavelength_sites_mean")); pk=finite_float(row.get("predicted_k_star_mean")); mk=finite_float(row.get("core_spectrum_peak_k_mean"))
         if sites>=8 and np.isfinite(pk) and np.isfinite(mk): resolved.append(g); predicted.append(pk); measured.append(mk)
     rho=rank_corr(predicted,measured)
     spectrum_trend=bool(len(resolved)>=3 and np.isfinite(rho) and rho>=.6)
@@ -139,9 +178,10 @@ def collect(root: Path) -> dict[str,Any]:
     return {
       "gate":"GATE2_CONVERGENCE_SHARD_COLLECTOR",
       "protocol":"GATE2_CONVERGENCE_PROTOCOL.md",
+      "collector_note":"Tie-aware Spearman ranks were frozen before any campaign artifact was inspected; unresolved spectral values remain null rather than being coerced.",
       "receipt_counts":{"core_shards":len(core),"log_shards":len(log)},
       "primary":{"classification":"GATE2_PRIMARY_PASS" if primary_pass else "GATE2_PRIMARY_FAIL_OR_UNRESOLVED","pass":primary_pass,"gate3_numerically_allowed":primary_pass,"gate3_launch_blocked_until_separate_protocol":True,"within_cell_checks":within,"spatial_checks":spatial,"time_step_checks":timestep,"birth_slopes":slopes},
-      "logarithmic":{"classification":"LOG_ARM_GATE2_PLATEAU_CANDIDATE" if log_pass else "LOG_ARM_REGULATOR_DEFINED_OR_UNRESOLVED","pass":log_pass,"plateau_checks":plateau,"resolved_g_for_spectrum":resolved,"predicted_k_star":predicted,"measured_core_peak_k":measured,"spearman_rank_correlation":rho,"spectrum_trend_pass":spectrum_trend,"median_core_peak_grid_relative_change":float(np.median(grid_peak_changes)) if grid_peak_changes else None,"spectrum_grid_pass":spectrum_grid,"long_distance_grid_plateau_pass":long_plateau,"raw_charge_pass":log_charge}
+      "logarithmic":{"classification":"LOG_ARM_GATE2_PLATEAU_CANDIDATE" if log_pass else "LOG_ARM_REGULATOR_DEFINED_OR_UNRESOLVED","pass":log_pass,"plateau_checks":plateau,"resolved_g_for_spectrum":resolved,"predicted_k_star":predicted,"measured_core_peak_k":measured,"spearman_rank_correlation":rho if np.isfinite(rho) else None,"spectrum_trend_pass":spectrum_trend,"median_core_peak_grid_relative_change":float(np.median(grid_peak_changes)) if grid_peak_changes else None,"spectrum_grid_pass":spectrum_grid,"long_distance_grid_plateau_pass":long_plateau,"raw_charge_pass":log_charge}
     }
 
 
