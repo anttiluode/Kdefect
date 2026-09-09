@@ -1,90 +1,14 @@
-name: Gate 2 convergence campaign fast
+name: Gate 2 convergence campaign fast (retired)
 
+# Provenance only. The same frozen experiment now runs as 30 smaller shards.
 on:
-  pull_request:
-    paths:
-      - "experiments/gate2_convergence_fast.py"
-      - ".github/workflows/gate2-convergence-fast.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  core:
-    runs-on: ubuntu-latest
-    timeout-minutes: 180
-    strategy:
-      fail-fast: false
-      max-parallel: 5
-      matrix:
-        include:
-          - {size: 64, dt: "0.02", tag: N64_dt002}
-          - {size: 96, dt: "0.02", tag: N96_dt002}
-          - {size: 128, dt: "0.02", tag: N128_dt002}
-          - {size: 96, dt: "0.01", tag: N96_dt001}
-          - {size: 128, dt: "0.01", tag: N128_dt001}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: {python-version: "3.12", cache: pip}
-      - run: python -m pip install -e '.[dev]'
-      - name: Run primary convergence cell
-        env: {PYTHONUNBUFFERED: "1"}
-        run: |
-          mkdir -p campaign
-          python experiments/gate2_convergence_fast.py --panel core --size ${{ matrix.size }} --dt ${{ matrix.dt }} --seeds 8 --output campaign/core_${{ matrix.tag }}.json
-      - uses: actions/upload-artifact@v4
-        with:
-          name: gate2-fast-core-${{ matrix.tag }}
-          path: campaign/*.json
-          retention-days: 90
-
-  log-regulator:
-    runs-on: ubuntu-latest
-    timeout-minutes: 180
-    strategy:
-      fail-fast: false
-      max-parallel: 3
-      matrix:
-        include:
-          - {size: 64, tag: N64}
-          - {size: 96, tag: N96}
-          - {size: 128, tag: N128}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: {python-version: "3.12", cache: pip}
-      - run: python -m pip install -e '.[dev]'
-      - name: Run logarithmic regulator cell
-        env: {PYTHONUNBUFFERED: "1"}
-        run: |
-          mkdir -p campaign
-          python experiments/gate2_convergence_fast.py --panel log --size ${{ matrix.size }} --dt 0.01 --seeds 6 --output campaign/log_${{ matrix.tag }}.json
-      - uses: actions/upload-artifact@v4
-        with:
-          name: gate2-fast-log-${{ matrix.tag }}
-          path: campaign/*.json
-          retention-days: 90
-
-  collect:
-    needs: [core, log-regulator]
+  note:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: {python-version: "3.12", cache: pip}
-      - run: python -m pip install -e '.[dev]'
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: gate2-fast-*
-          path: campaign-artifacts
-      - run: |
-          mkdir -p campaign-summary
-          python experiments/collect_gate2_convergence.py --root campaign-artifacts --output campaign-summary/gate2_convergence_summary.json
-          cat campaign-summary/gate2_convergence_summary.json
-      - uses: actions/upload-artifact@v4
-        with:
-          name: gate2-fast-convergence-summary
-          path: campaign-summary/gate2_convergence_summary.json
-          retention-days: 90
+      - run: echo "Use .github/workflows/gate2-convergence-sharded.yml."
