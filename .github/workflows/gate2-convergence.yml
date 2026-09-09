@@ -1,152 +1,16 @@
-name: Gate 2 convergence campaign
+name: Gate 2 convergence campaign (coarse retired)
 
+# Retained for provenance only. The scientifically identical 30-shard workflow
+# is the active runner; this coarse version is manual-only to avoid duplicate
+# GitHub Actions compute on each PR update.
 on:
-  pull_request:
-    paths:
-      - "GATE2_CONVERGENCE_PROTOCOL.md"
-      - "experiments/gate2_convergence_campaign.py"
-      - "experiments/collect_gate2_convergence.py"
-      - ".github/workflows/gate2-convergence.yml"
-      - "src/**"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  smoke:
+  note:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-      - run: python -m pip install -e '.[dev]'
-      - run: pytest -q
-      - name: Campaign helper smoke
-        run: |
-          python - <<'PY'
-          from experiments.gate2_convergence_campaign import _core_patch_spectrum
-          import numpy as np
-          z=np.ones((16,16), dtype=complex)
-          out=_core_patch_spectrum(z, [], 1.0)
-          assert out['cores'] == 0
-          print(out)
-          PY
-
-  core:
-    needs: smoke
-    runs-on: ubuntu-latest
-    timeout-minutes: 240
-    strategy:
-      fail-fast: false
-      max-parallel: 5
-      matrix:
-        include:
-          - size: 64
-            dt: "0.02"
-            tag: N64_dt002
-          - size: 96
-            dt: "0.02"
-            tag: N96_dt002
-          - size: 128
-            dt: "0.02"
-            tag: N128_dt002
-          - size: 96
-            dt: "0.01"
-            tag: N96_dt001
-          - size: 128
-            dt: "0.01"
-            tag: N128_dt001
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-      - run: python -m pip install -e '.[dev]'
-      - name: Run primary convergence cell
-        env:
-          PYTHONUNBUFFERED: "1"
-        run: |
-          mkdir -p campaign
-          python experiments/gate2_convergence_campaign.py \
-            --panel core \
-            --size ${{ matrix.size }} \
-            --dt ${{ matrix.dt }} \
-            --seeds 8 \
-            --output campaign/core_${{ matrix.tag }}.json
-      - uses: actions/upload-artifact@v4
-        with:
-          name: gate2-core-${{ matrix.tag }}
-          path: campaign/*.json
-          retention-days: 90
-
-  log-regulator:
-    needs: smoke
-    runs-on: ubuntu-latest
-    timeout-minutes: 240
-    strategy:
-      fail-fast: false
-      max-parallel: 3
-      matrix:
-        include:
-          - size: 64
-            tag: N64
-          - size: 96
-            tag: N96
-          - size: 128
-            tag: N128
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-      - run: python -m pip install -e '.[dev]'
-      - name: Run logarithmic regulator cell
-        env:
-          PYTHONUNBUFFERED: "1"
-        run: |
-          mkdir -p campaign
-          python experiments/gate2_convergence_campaign.py \
-            --panel log \
-            --size ${{ matrix.size }} \
-            --dt 0.01 \
-            --seeds 6 \
-            --output campaign/log_${{ matrix.tag }}.json
-      - uses: actions/upload-artifact@v4
-        with:
-          name: gate2-log-${{ matrix.tag }}
-          path: campaign/*.json
-          retention-days: 90
-
-  collect:
-    needs: [core, log-regulator]
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-      - run: python -m pip install -e '.[dev]'
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: gate2-*
-          path: campaign-artifacts
-      - name: Freeze collector result
-        run: |
-          mkdir -p campaign-summary
-          python experiments/collect_gate2_convergence.py \
-            --root campaign-artifacts \
-            --output campaign-summary/gate2_convergence_summary.json
-          cat campaign-summary/gate2_convergence_summary.json
-      - uses: actions/upload-artifact@v4
-        with:
-          name: gate2-convergence-summary
-          path: campaign-summary/gate2_convergence_summary.json
-          retention-days: 90
+      - run: echo "Use .github/workflows/gate2-convergence-sharded.yml for the frozen Gate-2 campaign."
