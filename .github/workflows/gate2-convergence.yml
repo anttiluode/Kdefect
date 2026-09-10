@@ -1,0 +1,16 @@
+name: Gate 2 convergence campaign (coarse retired)
+
+# Retained for provenance only. The scientifically identical 30-shard workflow
+# is the active runner; this coarse version is manual-only to avoid duplicate
+# GitHub Actions compute on each PR update.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  note:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Use .github/workflows/gate2-convergence-sharded.yml for the frozen Gate-2 campaign."

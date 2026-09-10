@@ -1,0 +1,14 @@
+name: Gate 2 convergence campaign fast (retired)
+
+# Provenance only. The same frozen experiment now runs as 30 smaller shards.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  note:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Use .github/workflows/gate2-convergence-sharded.yml."

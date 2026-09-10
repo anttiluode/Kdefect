@@ -1,0 +1,120 @@
+name: Gate 2 convergence 30-shard
+
+on:
+  pull_request:
+    paths:
+      - "experiments/gate2_convergence_shard.py"
+      - "experiments/collect_gate2_shards.py"
+      - ".github/workflows/gate2-convergence-sharded.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 15
+      matrix:
+        cell:
+          - "64,0.02,8,N64_dt002_t8"
+          - "64,0.02,16,N64_dt002_t16"
+          - "64,0.02,32,N64_dt002_t32"
+          - "96,0.02,8,N96_dt002_t8"
+          - "96,0.02,16,N96_dt002_t16"
+          - "96,0.02,32,N96_dt002_t32"
+          - "128,0.02,8,N128_dt002_t8"
+          - "128,0.02,16,N128_dt002_t16"
+          - "128,0.02,32,N128_dt002_t32"
+          - "96,0.01,8,N96_dt001_t8"
+          - "96,0.01,16,N96_dt001_t16"
+          - "96,0.01,32,N96_dt001_t32"
+          - "128,0.01,8,N128_dt001_t8"
+          - "128,0.01,16,N128_dt001_t16"
+          - "128,0.01,32,N128_dt001_t32"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: python -m pip install -e '.[dev]'
+      - name: Parse and run core shard
+        env:
+          CELL: ${{ matrix.cell }}
+          PYTHONUNBUFFERED: "1"
+        run: |
+          IFS=',' read -r N DT TAU TAG <<< "$CELL"
+          mkdir -p campaign
+          python experiments/gate2_convergence_shard.py --panel core --size "$N" --dt "$DT" --tau "$TAU" --seeds 8 --output "campaign/core_${TAG}.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gate2-shard-core-${{ matrix.cell }}
+          path: campaign/*.json
+          retention-days: 90
+
+  log-regulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 15
+      matrix:
+        cell:
+          - "64,0.020,N64_g0020"
+          - "64,0.030,N64_g0030"
+          - "64,0.045,N64_g0045"
+          - "64,0.0675,N64_g00675"
+          - "64,0.100,N64_g0100"
+          - "96,0.020,N96_g0020"
+          - "96,0.030,N96_g0030"
+          - "96,0.045,N96_g0045"
+          - "96,0.0675,N96_g00675"
+          - "96,0.100,N96_g0100"
+          - "128,0.020,N128_g0020"
+          - "128,0.030,N128_g0030"
+          - "128,0.045,N128_g0045"
+          - "128,0.0675,N128_g00675"
+          - "128,0.100,N128_g0100"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: python -m pip install -e '.[dev]'
+      - name: Parse and run log shard
+        env:
+          CELL: ${{ matrix.cell }}
+          PYTHONUNBUFFERED: "1"
+        run: |
+          IFS=',' read -r N G TAG <<< "$CELL"
+          mkdir -p campaign
+          python experiments/gate2_convergence_shard.py --panel log --size "$N" --dt 0.01 --regulator "$G" --seeds 6 --output "campaign/log_${TAG}.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gate2-shard-log-${{ matrix.cell }}
+          path: campaign/*.json
+          retention-days: 90
+
+  collect:
+    needs: [core, log-regulator]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: python -m pip install -e '.[dev]'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: gate2-shard-*
+          path: campaign-artifacts
+      - run: |
+          mkdir -p campaign-summary
+          python experiments/collect_gate2_shards.py --root campaign-artifacts --output campaign-summary/gate2_convergence_summary.json
+          cat campaign-summary/gate2_convergence_summary.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gate2-30-shard-summary
+          path: campaign-summary/gate2_convergence_summary.json
+          retention-days: 90

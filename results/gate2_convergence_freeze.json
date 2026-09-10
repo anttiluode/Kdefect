@@ -1,0 +1,65 @@
+{
+  "date": "2026-09-10",
+  "protocol": "GATE2_CONVERGENCE_PROTOCOL.md",
+  "source_run": 34381161350,
+  "source_commit": "87bcf89920ceb67a3bd152b29b450bcc02c9637c",
+  "source_artifact": {
+    "name": "gate2-fast-convergence-summary",
+    "id": 10127410897,
+    "sha256": "d15d3baa6c7717637695ac2e880f5afb1a9fbad343e14e7c933762e52fbb4218"
+  },
+  "primary": {
+    "classification": "GATE2_PRIMARY_FAIL_OR_UNRESOLVED",
+    "pass": false,
+    "gate3_numerically_allowed": false,
+    "spatial_birth_density_relative_change_N96_to_N128": {
+      "canonical": {"8": 0.27970297029702973, "16": 0.38064516129032255, "32": 0.23414634146341465},
+      "sqrt": {"8": 0.3869171885873347, "16": 0.41204065676309615, "32": 0.38609332113449224}
+    },
+    "spatial_slope_absolute_change": {"canonical": 0.04476204570272033, "sqrt": 0.0006379787846303719},
+    "max_detector_relative_birth_change": {
+      "N64_dt0.02": 0.09866666666666667,
+      "N96_dt0.02": 0.12965722801788376,
+      "N128_dt0.02": 0.14146341463414633,
+      "N96_dt0.01": 0.107421875,
+      "N128_dt0.01": 0.1148936170212766
+    },
+    "max_cadence_absolute_survival_change": {
+      "N64_dt0.02": 0.11557910201931981,
+      "N96_dt0.02": 0.06101024501696109,
+      "N128_dt0.02": 0.06891239846502413,
+      "N96_dt0.01": 0.09794732135015541,
+      "N128_dt0.01": 0.05019564874614228
+    },
+    "max_speed_absolute_survival_change": {
+      "N64_dt0.02": 0.041320934428101974,
+      "N96_dt0.02": 0.017527364603324935,
+      "N128_dt0.02": 0.01991574260949476,
+      "N96_dt0.01": 0.026700660990685562,
+      "N128_dt0.01": 0.021218107943628425
+    },
+    "nonzero_raw_charge_frames": 0
+  },
+  "logarithmic": {
+    "classification": "LOG_ARM_REGULATOR_DEFINED_OR_UNRESOLVED",
+    "pass": false,
+    "birth_ratio_relative_grid_change": {
+      "0.020": 0.18412196506354478,
+      "0.030": 0.1303000289847405,
+      "0.045": 0.297768342169094,
+      "0.0675": 0.20789692650627348,
+      "0.100": 0.029766197646953634
+    },
+    "nn_contrast_absolute_grid_change": {
+      "0.020": 0.07054412535470196,
+      "0.030": 0.07817362855724275,
+      "0.045": 0.007946645365343813,
+      "0.0675": 0.036635351136763875,
+      "0.100": 0.010232608651999639
+    },
+    "predicted_k_star_finest_grid": [1.3593476339029784, 1.1115210308054373, 0.8987439044737132, 0.7144831704808308],
+    "measured_core_peak_k_finest_grid": [0.5235987755982988, 0.5235987755982988, 0.5235987755982988, 0.5235987755982988],
+    "spearman_note": "Original collector reported -1.0 due to non-tie-aware double-argsort. Proper tied-rank Spearman is undefined because measured peaks are constant. The preregistered tracking criterion still fails."
+  },
+  "decision": "Do not launch Gate 3. The present resolved-core observable/discretization has not reached the required numerical plateau, and the logarithmic arm is regulator-defined or unresolved."
+}
