@@ -8,6 +8,13 @@ dynamics but different nonlinear gradient response. The target is a clean separa
 between Kibble–Zurek formation, core-scale motion and annihilation, and late spatial
 statistics.
 
+**Gate 2 is now a frozen negative result.** The present resolved-core observable has not
+reached the preregistered grid/detector/time-step plateau, the logarithmic arm is
+classified `LOG_ARM_REGULATOR_DEFINED_OR_UNRESOLVED`, and Gate 3 is not numerically
+allowed. See [GATE2_RESULT.md](GATE2_RESULT.md) for the exact kill criteria and
+[`results/gate2_convergence_freeze.json`](results/gate2_convergence_freeze.json) for a
+machine-readable receipt.
+
 This is a falsification project, not a cosmology claim. The implemented equation is an
 overdamped stochastic Model-A theory—a dissipative Euclidean cousin of relativistic
 `k`-defect models, not a theory of gravity and not yet evidence for a new universality
@@ -17,9 +24,10 @@ There is also a deliberate two-dimensional caveat: at nonzero temperature a stri
 equilibrium U(1) model has Berezinskii–Kosterlitz–Thouless rather than ordinary
 mean-field criticality. Here `epsilon=0` is the *bare Landau instability*, not a
 numerically calibrated BKT point. The familiar `-1/2` density exponent is therefore a
-reference hypothesis; Gate 3 must calibrate the finite-size transition/crossover or
-separately use a noise-seeded zero-temperature protocol before calling it a universal
-Kibble–Zurek exponent.
+reference hypothesis; Gate 3 would have required calibration of the finite-size
+transition/crossover or a separately preregistered noise-seeded zero-temperature
+protocol. Because Gate 2 failed numerical admissibility, that confirmatory Gate 3 was
+not launched.
 
 ## The seam
 
@@ -38,6 +46,10 @@ The open question tested here is at their intersection:
 > If the long-wavelength instability is held fixed while only the nonlinear core law
 > changes, is the Kibble–Zurek birth law unchanged even when survival and spatial
 > organization diverge?
+
+The current implementation does **not** establish that separation: Gate 2 found strong
+numerical dependence of the resolved birth observable before the confirmatory scaling
+question could be asked.
 
 ## One free energy, three arms
 
@@ -89,9 +101,31 @@ The code keeps four concepts separate:
 4. **Spatial organization:** counting cumulants, charge-resolved low-`k` form factors,
    and nearest-neighbor distance from the 2D Poisson point-process law.
 
-The small default pilot is an instrument check. The preregistered 100–400-realization
-campaign, convergence requirements, and kill conditions are in
-[PREREGISTRATION.md](PREREGISTRATION.md).
+The small default pilot is an instrument check. The preregistered campaign, convergence
+requirements, and kill conditions are in [PREREGISTRATION.md](PREREGISTRATION.md) and
+[GATE2_CONVERGENCE_PROTOCOL.md](GATE2_CONVERGENCE_PROTOCOL.md).
+
+## Gate 2 verdict
+
+The completed convergence campaign returned:
+
+```text
+GATE2_PRIMARY_FAIL_OR_UNRESOLVED
+LOG_ARM_REGULATOR_DEFINED_OR_UNRESOLVED
+```
+
+At fixed physical box size, `N=96 -> 128` changed canonical resolved birth density by
+`23–38%` and square-root birth density by `39–41%`, versus a frozen `<5%` requirement.
+Moving the resolved-core threshold changed birth density by about `10–14%` in every
+numerical cell, again outside the `<5%` rule. Several `dt=.02 -> .01` checks also fail.
+
+For the logarithmic arm, four of five regulator values fail the `<10%` grid-plateau
+criterion for the paired log/canonical birth ratio. On the finest grid the predicted
+core scale moves from `k*=1.359` to `0.714`, while the measured core-spectrum peak stays
+at the same Fourier bin `k=0.523599`. The spectral tracking hypothesis therefore fails
+rather than becoming evidence for a new regulator-independent scale.
+
+The full result and claim boundary are frozen in [GATE2_RESULT.md](GATE2_RESULT.md).
 
 ## First receipts
 
@@ -110,11 +144,11 @@ to detect:
   allowance;
 - a one-grid regulator scout changes absolute birth counts in every arm. The
   log/canonical birth ratio spans about `14%` over `g=0.015–0.12`, so regulator
-  independence is not established.
+  independence was already not established before the larger Gate-2 kill test.
 
-Those are leads and failure diagnostics, not discovery claims. Exact tables,
-bootstrap intervals, and the next decision are in [RESULTS.md](RESULTS.md); complete
-machine-readable records are under [`results/`](results/).
+Those are exploratory leads and failure diagnostics, not discovery claims. Exact tables
+and bootstrap intervals are in [RESULTS.md](RESULTS.md); complete machine-readable
+records are under [`results/`](results/).
 
 ![Strong-core exploratory scout](figures/gate1b_strong_core_scout.png)
 
@@ -132,13 +166,6 @@ python experiments/gate1_birth_survival.py
 python experiments/gate2_regulator_scout.py
 ```
 
-For a first statistically useful campaign (still below the final target):
-
-```bash
-python experiments/gate1_birth_survival.py \
-  --size 128 --seeds 32 --tau 20 32 50 80 126 200
-```
-
 Every experiment writes a machine-readable JSON receipt under `results/` and a figure
 under `figures/`. Seeds, numerical parameters, failed detections, effect estimates, and
 claim boundaries are retained.
@@ -150,9 +177,10 @@ claim boundaries are retained.
 | all arms are implemented as gradients of the declared lattice free energy | tested by Gate 0 |
 | the logarithmic arm crosses zero longitudinal stiffness at `kappa Y=1` | analytic and tested by Gate 0 |
 | winding detector resolves known synthetic cores and periodic worldlines | unit tested |
-| noncanonical arms have the same vortex-birth exponent | open |
-| noncanonical cores change post-birth survival or spatial geometry | open |
-| the logarithmic effect survives regulator/grid extrapolation | open and required |
+| noncanonical arms have the same vortex-birth exponent | **not established; Gate 3 blocked by Gate 2** |
+| noncanonical cores change post-birth survival or spatial geometry | exploratory only; no converged claim |
+| the logarithmic effect survives regulator/grid extrapolation | **failed / unresolved at Gate 2** |
+| current resolved-core birth observable is grid/detector converged | **no** |
 | any result applies to relativistic cosmology or gravity | **not claimed** |
 
 ## Repository map
