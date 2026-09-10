@@ -13,7 +13,9 @@ reached the preregistered grid/detector/time-step plateau, the logarithmic arm i
 classified `LOG_ARM_REGULATOR_DEFINED_OR_UNRESOLVED`, and Gate 3 is not numerically
 allowed. See [GATE2_RESULT.md](GATE2_RESULT.md) for the exact kill criteria and
 [`results/gate2_convergence_freeze.json`](results/gate2_convergence_freeze.json) for a
-machine-readable receipt.
+machine-readable receipt. The GitHub Actions artifact used to freeze the result is
+identified by run id, artifact id, SHA-256 digest, and source commit in both files, so
+the result does not depend on an expiring signed artifact URL.
 
 This is a falsification project, not a cosmology claim. The implemented equation is an
 overdamped stochastic Model-A theory—a dissipative Euclidean cousin of relativistic
